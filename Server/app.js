@@ -25,7 +25,7 @@ app.get('/display', (req, res) => {
 });
 
 // URL of the backend API
-const BACKEND_ENDPOINT = process.env.BACKEND || 'http://localhost:8181';
+const BACKEND_ENDPOINT = process.env.BACKEND || 'http://localhost:8080';
 
 // Game state variables
 let gameState = {
