@@ -1,0 +1,167 @@
+<!-- views/game.ejs -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quiplash Game</title>
+  <!-- Include Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <!-- Include Vue.js -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <!-- Include Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Include the refactored game.js -->
+  <script src="/static/game.js"></script>
+  <!-- Include your CSS here -->
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div id="game">
+    <!-- Authentication Section -->
+    <div v-if="!isLoggedIn">
+      <h2>Welcome to the Multiplayer Game</h2>
+      
+      <!-- Registration Form -->
+      <div>
+        <h3>Register</h3>
+        <input type="text" v-model="username" placeholder="Username">
+        <input type="password" v-model="password" placeholder="Password">
+        <button @click="register">Register</button>
+      </div>
+      
+      <!-- Login Form -->
+      <div>
+        <h3>Login</h3>
+        <input type="text" v-model="username" placeholder="Username">
+        <input type="password" v-model="password" placeholder="Password">
+        <button @click="login">Login</button>
+      </div>
+      
+      <!-- Display Messages and Errors -->
+      <div v-if="message" class="message">{{ message }}</div>
+      <div v-if="error" class="error">{{ error }}</div>
+    </div>
+    
+    <!-- Main Game Interface -->
+    <div v-else>
+      <h2>Welcome, {{ username }}!</h2>
+      
+      <!-- Display Current Phase and State -->
+      <div>
+        <p><strong>Current Phase:</strong> {{ phase }}</p>
+        <p><strong>State Number:</strong> {{ stateNumber }}</p>
+      </div>
+      
+      <!-- Admin Controls -->
+      <div v-if="isAdmin">
+        <h3>Admin Controls</h3>
+        <button @click="startGame">Start Game</button>
+        <button @click="pauseGame">Pause Game</button>
+        <button @click="resumeGame">Resume Game</button>
+        <button @click="resetGame">Reset Game</button>
+        
+        <!-- Kick Player Feature -->
+        <div>
+          <h4>Kick a Player</h4>
+          <input type="text" v-model="playerToKick" placeholder="Player Username">
+          <button @click="kickPlayer(playerToKick)" :disabled="!playerToKick">Kick Player</button>
+        </div>
+      </div>
+      
+      <!-- Audience Controls -->
+      <div v-if="isAudience">
+        <h3>Audience Controls</h3>
+        <!-- Audience-specific functionalities can be added here -->
+        <p>You are viewing the game as an audience member.</p>
+      </div>
+      
+      <!-- Game Phases -->
+      <!-- Joining Phase -->
+      <div v-if="phase === 'joining'">
+        <p>Waiting for players to join...</p>
+        <p><strong>Total Players:</strong> {{ players.length }}</p>
+        <p><strong>Total Audience:</strong> {{ audience.length }}</p>
+      </div>
+      
+      <!-- Prompts Phase -->
+      <div v-if="phase === 'prompts'">
+        <h3>Prompts Phase: Submit Your Prompts</h3>
+        <textarea v-model="newPrompt" placeholder="Enter your prompt here..."></textarea>
+        <button @click="submitPrompt">Submit Prompt</button>
+      </div>
+      
+      <!-- Answers Phase -->
+      <div v-if="phase === 'answers' && !isAdmin">
+        <h3>Submit Your Answers</h3>
+        <div v-for="prompt in assignedPrompts" :key="prompt.promptId" class="prompt-section">
+          <p><strong>Prompt:</strong> {{ prompt.promptText }}</p>
+          <textarea v-model="answers[prompt.promptId]" placeholder="Your answer..."></textarea>
+          <button @click="submitAnswer(prompt.promptId)">Submit Answer</button>
+        </div>
+      </div>
+      
+      <!-- Voting Phase -->
+      <div v-if="phase === 'voting'">
+        <h3>Voting Phase</h3>
+        <div v-if="currentVotingPrompt">
+          <p><strong>Prompt:</strong> {{ currentVotingPrompt.text }}</p>
+          <div v-for="answer in votingAnswers" :key="answer.username" class="voting-option">
+            <p>{{ answer.answerText }} - by {{ answer.username }}</p>
+            <button @click="castVote(currentVotingPrompt.id, answer.username)">Vote</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Results Phase -->
+      <div v-if="phase === 'results'">
+        <h3>Round Results</h3>
+        <div v-for="result in roundResults" :key="result.prompt">
+          <p><strong>Prompt:</strong> {{ result.prompt }}</p>
+          <ul>
+            <li v-for="ans in result.answers" :key="ans.username">
+              {{ ans.username }}: {{ ans.answerText }} - Votes: {{ ans.voteCount }}
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Scores Phase -->
+      <div v-if="phase === 'scores'">
+        <h3>Leaderboard</h3>
+        <ol>
+          <li v-for="player in leaderboard" :key="player.username">
+            {{ player.username }}: {{ player.score }}
+          </li>
+        </ol>
+      </div>
+      
+      <!-- Game Over Phase -->
+      <div v-if="phase === 'gameOver'">
+        <h3>Final Podium</h3>
+        <ol>
+          <li v-for="place in finalPodium" :key="place.username">
+            {{ place.username }}: {{ place.score }} points
+          </li>
+        </ol>
+      </div>
+      
+      <!-- Chat Interface -->
+      <div class="chat-container">
+        <h3>Chat</h3>
+        <div class="chat-messages">
+          <div v-for="chat in chatMessages" :key="chat.timestamp" class="chat-message">
+            <strong>{{ chat.username }}:</strong> {{ chat.message }}
+          </div>
+        </div>
+        <input type="text" v-model="newChatMessage" placeholder="Type your message...">
+        <button @click="sendChatMessage">Send</button>
+      </div>
+      
+      <!-- Display Messages and Errors -->
+      <div v-if="message" class="message">{{ message }}</div>
+      <div v-if="error" class="error">{{ error }}</div>
+    </div>
+  </div>
+</body>
+</html>

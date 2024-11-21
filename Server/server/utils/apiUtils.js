@@ -4,54 +4,101 @@ const axios = require('axios');
 
 const BACKEND_ENDPOINT = process.env.BACKEND_ENDPOINT || 'http://localhost:8181';
 
-module.exports.registerPlayer = async (username, password) => {
-  try {
-    const response = await axios.post(`${BACKEND_ENDPOINT}/player/register`, {
-      username,
-      password,
-    });
-    return response.data;
-  } catch (error) {
-    console.error('API Register Error:', error.response ? error.response.data : error.message);
-    throw error.response ? error.response.data : error;
-  }
-};
+module.exports = {
+  // Existing methods...
 
-module.exports.loginPlayer = async (username, password) => {
-  try {
-    const response = await axios.post(`${BACKEND_ENDPOINT}/player/login`, {
-      username,
-      password,
-    });
-    return response.data;
-  } catch (error) {
-    console.error('API Login Error:', error.response ? error.response.data : error.message);
-    throw error.response ? error.response.data : error;
-  }
-};
+  async registerPlayer(username, password) {
+    try {
+      const response = await axios.post(`${BACKEND_ENDPOINT}/auth/register`, {
+        username,
+        password,
+      });
+      return response.data; // Expected to have { success: Boolean, message: String }
+    } catch (error) {
+      console.error('API registerPlayer Error:', error.response ? error.response.data : error.message);
+      return { success: false, message: error.response ? error.response.data.message : 'Registration failed.' };
+    }
+  },
 
-module.exports.createPrompt = async (username, promptText) => {
-  try {
-    const response = await axios.post(`${BACKEND_ENDPOINT}/prompt/create`, {
-      text: promptText,
-      username: username,
-    });
-    return response.data;
-  } catch (error) {
-    console.error('API Create Prompt Error:', error.response ? error.response.data : error.message);
-    throw error.response ? error.response.data : error;
-  }
-};
+  async loginPlayer(username, password) {
+    try {
+      const response = await axios.post(`${BACKEND_ENDPOINT}/auth/login`, {
+        username,
+        password,
+      });
+      return response.data; // Expected to have { success: Boolean, message: String }
+    } catch (error) {
+      console.error('API loginPlayer Error:', error.response ? error.response.data : error.message);
+      return { success: false, message: error.response ? error.response.data.message : 'Login failed.' };
+    }
+  },
 
-module.exports.getPrompts = async (players, language) => {
-  try {
-    const response = await axios.post(`${BACKEND_ENDPOINT}/utils/get`, {
-      players: players,
-      language: language,
-    });
-    return response.data;
-  } catch (error) {
-    console.error('API Get Prompts Error:', error.response ? error.response.data : error.message);
-    throw error.response ? error.response.data : error;
-  }
+  async createPrompt(username, promptText) {
+    try {
+      const response = await axios.post(`${BACKEND_ENDPOINT}/prompt/create`, {
+        username,
+        prompt: promptText,
+      });
+      return response.data; // Expected to have { success: Boolean, message: String }
+    } catch (error) {
+      console.error('API createPrompt Error:', error.response ? error.response.data : error.message);
+      return { success: false, message: error.response ? error.response.data.message : 'Prompt creation failed.' };
+    }
+  },
+
+  // Existing methods...
+
+  async getPodium() {
+    try {
+      const response = await axios.post(`${BACKEND_ENDPOINT}/utils/podium`, {});
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async deletePlayer(username) {
+    try {
+      const response = await axios.post(`${BACKEND_ENDPOINT}/player/delete`, {
+        username,
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async editPlayer(username, data) {
+    try {
+      const response = await axios.post(`${BACKEND_ENDPOINT}/player/edit`, {
+        username,
+        ...data,
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async deletePrompt(promptId) {
+    try {
+      const response = await axios.post(`${BACKEND_ENDPOINT}/prompt/delete`, {
+        promptId,
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async suggestPrompt(keyword) {
+    try {
+      const response = await axios.post(`${BACKEND_ENDPOINT}/prompt/suggest`, {
+        keyword,
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 };

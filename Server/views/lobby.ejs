@@ -1,0 +1,27 @@
+<!-- views/lobby.ejs -->
+
+<div v-if="phase === 'joining'">
+    <h3>Lobby</h3>
+    <p>Players Joined:</p>
+    <ul>
+      <li v-for="player in players" :key="player.username">
+        {{ player.username }} <span v-if="player.isAdmin">(Admin)</span>
+      </li>
+    </ul>
+    <p>Audience Members:</p>
+    <ul>
+      <li v-for="audience in audience" :key="audience.username">
+        {{ audience.username }}
+      </li>
+    </ul>
+    
+    <!-- Admin Controls -->
+    <div v-if="isAdmin && players.length >= minimumPlayers">
+      <button @click="advancePhase">Start Game</button>
+    </div>
+    
+    <!-- Messages and Errors -->
+    <div v-if="message" class="message">{{ message }}</div>
+    <div v-if="error" class="error">{{ error }}</div>
+  </div>
+  
