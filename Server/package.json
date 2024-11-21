@@ -1,7 +1,7 @@
 {
-  "name": "ecsterminate",
+  "name": "ecsexample",
   "version": "1.0.0",
-  "description": "ECS Quiplash Game",
+  "description": "ECS Example Game",
   "main": "app.js",
   "engines": {
     "node": "20.x"
@@ -9,8 +9,7 @@
   "scripts": {
     "start": "node app.js",
     "gdeploy": "gcloud app deploy --version test",
-    "hdeploy": "git push heroku master",
-    "tests": "echo \"Error: no test specified\" && exit 1"
+    "hdeploy": "git push heroku master"
   },
   "author": "ab3u21",
   "license": "ECS",
