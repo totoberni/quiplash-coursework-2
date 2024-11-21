@@ -1,19 +1,32 @@
 <!doctype html>
 <html lang="en">
 
-    <%- include('header'); -%>
+<%- include('header'); -%>
 
-    <h2 class="title">ECS Example Game</h2>
+<div id="app">
+  <h2 class="title">Quiplash Game</h2>
 
-    <div id="game">
-        <div v-if="connected">
-            <%- include('chat'); -%>
-        </div>
-        <div v-else>
-            <p>Connecting...</p>
-        </div>
+  <div v-if="!isLoggedIn">
+    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+    <div>
+      <input type="text" v-model="username" placeholder="Username" class="form-control">
+      <input type="password" v-model="password" placeholder="Password" class="form-control">
+      <button @click="register" class="btn btn-primary">Register</button>
+      <button @click="login" class="btn btn-secondary">Login</button>
     </div>
+  </div>
 
-    <%- include('footer'); -%>
+  <div v-else>
+    <p>Welcome, {{ username }}!</p>
+    <p v-if="isAdmin">You are the admin.</p>
+    <!-- Include game components here -->
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="/static/client.js"></script>
+
+<%- include('footer'); -%>
 
 </html>

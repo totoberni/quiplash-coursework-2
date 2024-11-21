@@ -8,8 +8,8 @@
   },
   "scripts": {
     "start": "node app.js",
-    "gdeploy": "gcloud app deploy --version test",
-    "hdeploy": "git push heroku master"
+    "gdeploy": "gcloud app deploy --project ecsexample",
+    "hdeploy": "heroku deploy:jar target/ecsexample-1.0.0.jar --app ecsexample"
   },
   "author": "ab3u21",
   "license": "ECS",

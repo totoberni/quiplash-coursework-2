@@ -1,61 +1,54 @@
+// app.js
+
 'use strict';
 
-//Set up express
 const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+
+const authRoutes = require('./server/routes/authRoutes');
+const gameController = require('./server/controllers/gameController');
+const socketUtils = require('./server/utils/socketUtils');
+
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
 
-//Setup socket.io
-const server = require('http').Server(app);
-const io = require('socket.io')(server);
-
-//Setup static page handling
+// Setup middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
 app.use('/static', express.static('public'));
 
-//Handle client interface on /
+// Set up routes
+app.use('/auth', authRoutes);
+
+// Handle client interface on '/'
 app.get('/', (req, res) => {
   res.render('client');
 });
-//Handle display interface on /display
+
+// Handle display interface on '/display'
 app.get('/display', (req, res) => {
   res.render('display');
 });
 
-// URL of the backend API
-const BACKEND_ENDPOINT = process.env.BACKEND || 'http://localhost:8181';
+// Socket.IO connection
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
 
-//Start the server
-function startServer() {
-    const PORT = process.env.PORT || 8080;
-    server.listen(PORT, () => {
-        console.log(`Server listening on port ${PORT}`);
-    });
-}
+  // Initialize socket event handlers
+  socketUtils.initializeSocket(socket, io);
 
-//Chat message
-function handleChat(message) {
-    console.log('Handling chat: ' + message); 
-    io.emit('chat',message);
-}
-
-//Handle new connection
-io.on('connection', socket => { 
-  console.log('New connection');
-
-  //Handle on chat message received
-  socket.on('chat', message => {
-    handleChat(message);
-  });
-
-  //Handle disconnection
+  // Handle disconnection
   socket.on('disconnect', () => {
-    console.log('Dropped connection');
+    console.log('Client disconnected:', socket.id);
+    gameController.handleDisconnect(socket);
   });
 });
 
-//Start server
-if (module === require.main) {
-  startServer();
-}
-
-module.exports = server;
+// Start the server
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
