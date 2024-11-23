@@ -1,0 +1,202 @@
+Project Recap and Next Steps
+1. Recap of Progress
+Refactored gameLogic.js:
+
+Changed from a class-based implementation to a plain JavaScript module.
+Removed all constructor references and singleton patterns.
+Ensured gameLogic.js solely manages game logic and state without handling any events or Socket.IO interactions.
+Updated Controllers:
+
+authController.js:
+Refactored to interact with the new gameLogic.js module.
+Removed any instantiation of GameLogic and utilized exported functions directly.
+gameController.js:
+Delegated prompt handling to promptController.js.
+Interacted with gameLogic.js functions without using class-based references.
+promptController.js:
+Handles all prompt-related events.
+Interacts with gameLogic.js to manage prompt submissions.
+Utilizes the Prompt model for consistent data structures.
+voteController.js:
+Manages all vote-related events.
+Interfaces with gameLogic.js to record and process votes.
+Ensures validation and updates to the game state based on votes.
+Cleaned Up Models:
+
+Removed the redundant Prompt class from promptModel.js.
+Ensured that all models (Player, GameState) are consistent and utilized appropriately across controllers and utilities.
+2. Current Project Structure
+arduino
+Copy code
+Server/
+├── app.js
+├── controllers/
+│   ├── authController.js
+│   ├── gameController.js
+│   ├── promptController.js
+│   └── voteController.js
+├── models/
+│   ├── gameStateModel.js
+│   ├── playerModel.js
+│   └── promptModel.js
+├── utils/
+│   ├── apiUtils.js
+│   ├── gameLogic.js
+│   └── socketUtils.js
+├── views/
+│   ├── 404.ejs
+│   ├── error.ejs
+│   └── game.ejs
+└── public/
+    └── ...static files...
+app.js: Entry point of the application, sets up Express and Socket.IO, and initializes Socket event handlers.
+controllers/: Contains all controller files handling specific Socket.IO events.
+authController.js: Manages user registration and login.
+gameController.js: Handles general game events like chat messages and answer submissions.
+promptController.js: Manages prompt submissions.
+voteController.js: Oversees voting actions.
+models/: Defines data structures for the game.
+gameStateModel.js: Represents the overall game state.
+playerModel.js: Defines the player structure.
+promptModel.js: (Redundant class removed; ensure consistency in prompt representations).
+utils/: Utility modules that provide supporting functions.
+apiUtils.js: Handles external API interactions.
+gameLogic.js: Manages all game-related logic and state manipulation.
+socketUtils.js: Sets up and manages Socket.IO event listeners.
+views/: EJS templates for rendering the frontend.
+game.ejs: Main game interface.
+404.ejs: Custom 404 error page.
+error.ejs: General error handling page.
+public/: Serves static files like CSS, JavaScript, and images.
+3. Next Steps
+Finalize gameLogic.js:
+Ensure Proper Exports:
+Verify that all necessary functions and variables are correctly exported.
+Example:
+javascript
+Copy code
+// server/utils/gameLogic.js
+const gameState = { /* ... */ };
+
+function addPlayer(username, socketId, isAdmin = false) { /* ... */ }
+function addAudience(username, socketId) { /* ... */ }
+// ... other functions ...
+
+module.exports = {
+  gameState,
+  addPlayer,
+  addAudience,
+  // ... other exports ...
+};
+Remove Any Remaining Class-Based Code:
+Ensure there are no class declarations or new keyword usages within gameLogic.js.
+Refactor Controllers to Align with gameLogic.js:
+authController.js:
+Confirm that it imports and uses gameLogic functions directly without instantiation.
+gameController.js:
+Ensure it no longer references GameLogic as a constructor.
+Verify delegation to promptController.js is correctly handled.
+promptController.js:
+Maintain interaction with gameLogic through exported functions.
+Remove any redundant or outdated references.
+voteController.js:
+Ensure it interacts with gameLogic without class-based references.
+Validate that all vote-related logic is correctly processed via gameLogic functions.
+Update socketUtils.js:
+Ensure Correct Controller Integration:
+Verify that all Socket.IO events are mapped to the appropriate controller functions.
+Example:
+javascript
+Copy code
+// server/utils/socketUtils.js
+const authController = require('../controllers/authController');
+const gameController = require('../controllers/gameController');
+const voteController = require('../controllers/voteController');
+
+function initializeSocket(io) {
+  io.on('connection', (socket) => {
+    console.log('New client connected:', socket.id);
+
+    // Handle registration
+    socket.on('register', (data) => {
+      authController.handleRegister(socket, data, io);
+    });
+
+    // Handle login
+    socket.on('login', (data) => {
+      authController.handleLogin(socket, data, io);
+    });
+
+    // Handle chat messages
+    socket.on('chatMessage', (data) => {
+      gameController.handleChatMessage(socket, data, io);
+    });
+
+    // Handle prompt submissions
+    socket.on('prompt', (data) => {
+      gameController.handlePrompt(socket, data, io);
+    });
+
+    // Handle answer submissions
+    socket.on('answer', (data) => {
+      gameController.handleAnswer(socket, data, io);
+    });
+
+    // Handle voting
+    socket.on('vote', (data) => {
+      voteController.handleVote(socket, data, io);
+    });
+
+    // Handle game advancement
+    socket.on('advance', (data) => {
+      gameController.handleAdvance(socket, data, io);
+    });
+
+    // Handle disconnections
+    socket.on('disconnect', () => {
+      gameController.handleDisconnect(socket, io);
+    });
+  });
+}
+
+module.exports = {
+  initializeSocket,
+};
+Testing:
+Run the Application:
+Start the server and monitor for any runtime errors.
+Example:
+bash
+Copy code
+npm start
+Validate Functionality:
+Test user registration and login flows.
+Submit prompts and ensure they are correctly processed and displayed.
+Submit answers and verify they are recorded accurately.
+Cast votes and confirm that voting logic works as intended.
+Ensure game phases transition smoothly based on user interactions.
+Fix Any Remaining Errors:
+Address the TypeError: GameLogic is not a constructor by ensuring all controllers no longer attempt to instantiate gameLogic as a class.
+Code Cleanup and Documentation:
+Remove Unused Code:
+Ensure that there are no leftover class-based implementations or redundant code segments.
+Update Documentation:
+Document the exported functions and variables in gameLogic.js.
+Ensure that each controller has comments explaining its responsibilities and interactions.
+Enhancements (Optional):
+Improve Error Handling:
+Implement more descriptive error messages and possibly error codes.
+Optimize Performance:
+Review game logic for any performance bottlenecks, especially in vote tallying or prompt assignments.
+Enhance Security:
+Implement authentication tokens (e.g., JWT) to secure user sessions.
+Sanitize all user inputs to prevent injection attacks.
+Deployment Preparations:
+Environment Configuration:
+Set up environment variables for sensitive information (e.g., API keys, database URLs).
+Production Build:
+Optimize the application for production, ensuring efficient asset serving and error handling.
+Monitoring and Logging:
+Implement monitoring tools to track application performance and errors post-deployment.
+Summary
+The project has undergone significant refactoring to decouple game logic from event handling, enhancing modularity and maintainability. By transitioning gameLogic.js from a class-based structure to a plain module and adjusting all controllers accordingly, the application now adheres to a clear separation of concerns. The next steps focus on thorough testing, ensuring seamless interaction between controllers and game logic, and preparing the application for deployment with robust error handling and security measures.

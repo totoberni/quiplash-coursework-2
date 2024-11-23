@@ -1,171 +1,192 @@
 // server/controllers/authController.js
 
-const apiUtils = require('../utils/apiUtils');
+const request = require('request');
 const gameLogic = require('../utils/gameLogic');
 
+// **Define BACKEND_ENDPOINT Directly Without '/auth' Prefix**
+const BACKEND_ENDPOINT = process.env.BACKEND_ENDPOINT || 'http://localhost:8181';
+
 /**
- * Handles player registration via Socket.IO.
- * @param {Object} socket - Socket.IO socket object.
- * @param {Object} data - Registration data containing username and password.
- * @param {Object} io - Socket.IO server instance.
+ * Handles player registration via HTTP.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
  */
-async function handleRegister(socket, data, io) {
-  const { username, password } = data;
+function registerHTTP(req, res) {
+  const { username, password } = req.body;
 
   // Server-side validation
   if (!username || typeof username !== 'string') {
-    socket.emit('registerResult', {
-      success: false,
-      message: 'Username is required and must be a string.',
+    return res.status(400).json({
+      result: false,
+      msg: 'Username is required and must be a string.',
     });
-    return;
   }
-  if (username.length < 4 || username.length > 15) {
-    socket.emit('registerResult', {
-      success: false,
-      message: 'Username must be between 5 and 15 characters.',
+  if (username.length <= 4 || username.length >= 8) { // Adjusted to match goals
+    return res.status(400).json({
+      result: false,
+      msg: 'Username must be more than 4 and less than 8 characters.',
     });
-    return;
   }
   if (!password || typeof password !== 'string') {
-    socket.emit('registerResult', {
-      success: false,
-      message: 'Password is required and must be a string.',
+    return res.status(400).json({
+      result: false,
+      msg: 'Password is required and must be a string.',
     });
-    return;
   }
-  if (password.length < 8 || password.length > 15) {
-    socket.emit('registerResult', {
-      success: false,
-      message: 'Password must be between 8 and 15 characters.',
+  if (password.length <= 8 || password.length >= 16) { // Adjusted to match goals
+    return res.status(400).json({
+      result: false,
+      msg: 'Password must be more than 8 and less than 16 characters.',
     });
-    return;
   }
 
-  try {
-    // Call the API to register the user
-    const result = await apiUtils.registerPlayer(username, password);
-
-    if (result.success) {
-      // Check if the user is already in the game (prevents duplicate registrations)
-      if (gameLogic.isUserInGame(username)) {
-        socket.emit('registerResult', {
-          success: false,
-          message: 'Username is already taken in the game.',
+  // Make a POST request to the backend API for registration
+  request.post(
+    `${BACKEND_ENDPOINT}/player/register`,
+    {
+      json: true,
+      body: { username, password },
+    },
+    (err, response, body) => {
+      if (err) {
+        console.error('Registration Error:', err);
+        return res.status(500).json({
+          result: false,
+          msg: 'An error occurred during registration.',
         });
-        return;
       }
 
-      // Determine if the user should be a player or audience
-      const totalPlayers = gameLogic.getTotalPlayers();
-      const isAdmin = totalPlayers === 0; // First player is admin
-      const role = totalPlayers < 8 ? 'player' : 'audience';
+      if (response.statusCode === 200 && body.result === true) {
+        // Check if the user is already in the game (prevents duplicate registrations)
+        if (gameLogic.isUserInGame(username)) {
+          return res.status(409).json({
+            result: false,
+            msg: 'Username is already taken in the game.',
+          });
+        }
 
-      if (role === 'player') {
-        gameLogic.addPlayer(username, socket.id, isAdmin);
+        // Determine if the user should be a player or audience
+        const totalPlayers = gameLogic.getTotalPlayers();
+        const isAdmin = totalPlayers === 0; // First player is admin
+        const role = totalPlayers < 8 ? 'player' : 'audience';
+
+        // Add user to game logic with a temporary socket ID (to be updated upon Socket.IO connection)
+        if (role === 'player') {
+          gameLogic.addPlayer(username, null, isAdmin);
+        } else {
+          gameLogic.addAudience(username, null, isAdmin);
+        }
+
+        // Respond with successful registration
+        res.status(200).json({
+          result: true,
+          msg: 'Registration successful.',
+        });
+
+        // **Note:** Emitting Socket.IO events from here requires access to the `io` instance.
+        // Consider restructuring your server to allow controllers to access `io`, possibly via an event emitter.
       } else {
-        gameLogic.addAudience(username, socket.id);
+        // Registration failed due to API error
+        res.status(response.statusCode).json({
+          result: false,
+          msg: body.msg || 'Registration failed.',
+        });
       }
-
-      // Respond with successful registration
-      socket.emit('registerResult', {
-        success: true,
-        message: 'Registration successful.',
-        role,
-        isAdmin,
-      });
-
-      // Notify all clients about the new player
-      io.emit('playerJoined', { username });
-
-    } else {
-      // Registration failed due to API error
-      socket.emit('registerResult', {
-        success: false,
-        message: result.message || 'Registration failed.',
-      });
     }
-  } catch (error) {
-    console.error('Registration Error:', error);
-    socket.emit('registerResult', {
-      success: false,
-      message: 'An error occurred during registration.',
-    });
-  }
+  );
 }
 
 /**
- * Handles player login via Socket.IO.
- * @param {Object} socket - Socket.IO socket object.
- * @param {Object} data - Login data containing username and password.
- * @param {Object} io - Socket.IO server instance.
+ * Handles player login via HTTP.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
  */
-async function handleLogin(socket, data, io) {
-  const { username, password } = data;
+function loginHTTP(req, res) {
+  const { username, password } = req.body;
 
   // Server-side validation
   if (!username || typeof username !== 'string') {
-    socket.emit('loginResult', {
-      success: false,
-      message: 'Username is required and must be a string.',
+    return res.status(400).json({
+      result: false,
+      msg: 'Username is required and must be a string.',
     });
-    return;
+  }
+  if (username.length <= 4 || username.length >= 8) { // Adjusted to match goals
+    return res.status(400).json({
+      result: false,
+      msg: 'Username must be more than 4 and less than 8 characters.',
+    });
   }
   if (!password || typeof password !== 'string') {
-    socket.emit('loginResult', {
-      success: false,
-      message: 'Password is required and must be a string.',
+    return res.status(400).json({
+      result: false,
+      msg: 'Password is required and must be a string.',
     });
-    return;
+  }
+  if (password.length <= 8 || password.length >= 16) { // Adjusted to match goals
+    return res.status(400).json({
+      result: false,
+      msg: 'Password must be more than 8 and less than 16 characters.',
+    });
   }
 
-  try {
-    // Call the API to authenticate the user
-    const result = await apiUtils.loginPlayer(username, password);
-
-    if (result.success) {
-      // Check if the user is already logged in
-      if (gameLogic.isUserInGame(username)) {
-        socket.emit('loginResult', { success: false, message: 'User is already logged in.' });
-        return;
+  // Make a POST request to the backend API for login
+  request.post(
+    `${BACKEND_ENDPOINT}/player/login`,
+    {
+      json: true,
+      body: { username, password },
+    },
+    (err, response, body) => {
+      if (err) {
+        console.error('Login Error:', err);
+        return res.status(500).json({
+          result: false,
+          msg: 'An error occurred during login.',
+        });
       }
 
-      // Determine if the user should be a player or audience
-      const totalPlayers = gameLogic.getTotalPlayers();
-      const isAdmin = totalPlayers === 0; // First player is admin
-      const role = totalPlayers < 8 ? 'player' : 'audience';
+      if (response.statusCode === 200 && body.result === true) {
+        // Check if the user is already logged in
+        if (gameLogic.isUserInGame(username)) {
+          return res.status(409).json({
+            result: false,
+            msg: 'User is already logged in.',
+          });
+        }
 
-      if (role === 'player') {
-        gameLogic.addPlayer(username, socket.id, isAdmin);
+        // Determine if the user should be a player or audience
+        const totalPlayers = gameLogic.getTotalPlayers();
+        const isAdmin = totalPlayers === 0; // First player is admin
+        const role = totalPlayers < 8 ? 'player' : 'audience';
+
+        // Add user to game logic with a temporary socket ID (to be updated upon Socket.IO connection)
+        if (role === 'player') {
+          gameLogic.addPlayer(username, null, isAdmin);
+        } else {
+          gameLogic.addAudience(username, null, isAdmin);
+        }
+
+        // Respond with successful login
+        res.status(200).json({
+          result: true,
+          msg: 'Login successful.',
+        });
+
+        // **Note:** Emitting Socket.IO events from here requires access to the `io` instance.
+        // Consider restructuring your server to allow controllers to access `io`, possibly via an event emitter.
       } else {
-        gameLogic.addAudience(username, socket.id);
+        // Login failed due to API error
+        res.status(response.statusCode).json({
+          result: false,
+          msg: body.msg || 'Login failed.',
+        });
       }
-
-      // Respond with successful login
-      socket.emit('loginResult', {
-        success: true,
-        message: 'Login successful.',
-        role,
-        isAdmin,
-      });
-
-      // Notify all clients about the new player
-      io.emit('playerJoined', { username });
-
-    } else {
-      // Login failed due to API error
-      socket.emit('loginResult', {
-        success: false,
-        message: result.message || 'Login failed.',
-      });
     }
-  } catch (error) {
-    console.error('Login Error:', error);
-    socket.emit('loginResult', { success: false, message: 'An error occurred during login.' });
-  }
+  );
 }
 
 module.exports = {
-  handleRegister,
-  handleLogin,
+  registerHTTP,
+  loginHTTP,
 };

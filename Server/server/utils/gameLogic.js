@@ -1,40 +1,28 @@
 // server/utils/gameLogic.js
 
 /**
- * GameLogic Singleton Class
+ * GameLogic Module
  * Manages the entire game state and provides methods to manipulate and retrieve game data.
  */
-class GameLogic {
-    /**
-     * Constructs the GameLogic instance.
-     * Implements the Singleton pattern by ensuring only one instance exists.
-     */
-    constructor() {
-      if (GameLogic.instance) {
-        return GameLogic.instance;
-      }
-  
-      // Initialize the game state
-      this.gameState = {
-        phase: 'joining', // Current phase of the game
-        stateNumber: 0, // Tracks the progression of the game
-        players: {}, // Active players
-        audience: {}, // Audience members
-        submittedPrompts: [], // Prompts submitted during the game
-        activePrompts: [], // Prompts used in the current round
-        currentPromptIndex: 0, // Index of the current prompt during voting
-        answers: {}, // Answers submitted by players
-        votes: {}, // Votes cast
-        roundScores: {}, // Round scores for players
-        totalScores: {}, // Total scores for players
-        roundNumber: 1, // Current round number
-        totalRounds: 3, // Total number of rounds in the game
-        isPaused: false, // Indicates if the game is paused
-      };
-  
-      // Assign the instance
-      GameLogic.instance = this;
-    }
+
+const gameLogic = {
+    // Initialize the game state
+    gameState: {
+      phase: 'joining', // Current phase of the game
+      stateNumber: 0, // Tracks the progression of the game
+      players: {}, // Active players
+      audience: {}, // Audience members
+      submittedPrompts: [], // Prompts submitted during the game
+      activePrompts: [], // Prompts used in the current round
+      currentPromptIndex: 0, // Index of the current prompt during voting
+      answers: {}, // Answers submitted by players
+      votes: {}, // Votes cast
+      roundScores: {}, // Round scores for players
+      totalScores: {}, // Total scores for players
+      roundNumber: 1, // Current round number
+      totalRounds: 3, // Total number of rounds in the game
+      isPaused: false, // Indicates if the game is paused
+    },
   
     /**
      * Adds a player to the game.
@@ -61,7 +49,7 @@ class GameLogic {
       this.gameState.totalScores[username] = 0;
   
       return true;
-    }
+    },
   
     /**
      * Adds an audience member to the game.
@@ -69,7 +57,7 @@ class GameLogic {
      * @param {String} socketId - The audience member's socket ID.
      * @returns {Boolean} - True if audience member was added, false if username is taken.
      */
-    addAudience(username, socketId) {
+    addAudience(username, socketId, isAdmin = false) {
       if (this.gameState.players[username] || this.gameState.audience[username]) {
         return false; // Username already taken
       }
@@ -81,7 +69,7 @@ class GameLogic {
       };
   
       return true;
-    }
+    },
   
     /**
      * Removes a user from the game based on their socket ID.
@@ -118,7 +106,7 @@ class GameLogic {
       }
   
       return null;
-    }
+    },
   
     /**
      * Assigns a new admin if the current admin disconnects.
@@ -128,9 +116,8 @@ class GameLogic {
       if (remainingPlayers.length > 0) {
         remainingPlayers[0].isAdmin = true;
         // Notify the new admin if necessary
-        // For example: io.to(newAdmin.socketId).emit('adminAssigned', {...});
       }
-    }
+    },
   
     /**
      * Checks if a user is already in the game.
@@ -142,7 +129,7 @@ class GameLogic {
         this.gameState.players.hasOwnProperty(username) ||
         this.gameState.audience.hasOwnProperty(username)
       );
-    }
+    },
   
     /**
      * Retrieves the username associated with a given socket ID.
@@ -158,7 +145,7 @@ class GameLogic {
         (a) => a.socketId === socketId
       );
       return audience ? audience.username : null;
-    }
+    },
   
     /**
      * Checks if the user associated with the socket ID is the admin.
@@ -168,7 +155,7 @@ class GameLogic {
     isAdmin(socketId) {
       const username = this.getUsernameBySocketId(socketId);
       return username ? this.gameState.players[username].isAdmin : false;
-    }
+    },
   
     /**
      * Starts the game.
@@ -197,7 +184,7 @@ class GameLogic {
       this.gameState.stateNumber += 1;
   
       return true;
-    }
+    },
   
     /**
      * Advances the game to the next phase.
@@ -251,7 +238,7 @@ class GameLogic {
         default:
           break;
       }
-    }
+    },
   
     /**
      * Ends the joining phase.
@@ -264,7 +251,7 @@ class GameLogic {
         player.state = 'active';
       });
       this.gameState.stateNumber += 1;
-    }
+    },
   
     /**
      * Starts the prompts phase.
@@ -274,7 +261,7 @@ class GameLogic {
       this.gameState.stateNumber += 1;
       this.gameState.activePrompts = [];
       this.gameState.currentPromptIndex = 0;
-    }
+    },
   
     /**
      * Ends the prompts phase.
@@ -282,7 +269,7 @@ class GameLogic {
     endPrompts() {
       // Prompts have been collected and stored
       this.gameState.stateNumber += 1;
-    }
+    },
   
     /**
      * Starts the answers phase.
@@ -304,7 +291,7 @@ class GameLogic {
   
       // Shuffle and assign prompts to players
       this.assignPrompts(combinedPrompts);
-    }
+    },
   
     /**
      * Ends the answers phase.
@@ -313,7 +300,7 @@ class GameLogic {
       // All answers have been collected
       this.gameState.phase = 'voting';
       this.gameState.stateNumber += 1;
-    }
+    },
   
     /**
      * Starts the voting phase.
@@ -322,7 +309,7 @@ class GameLogic {
       this.gameState.phase = 'voting';
       this.gameState.stateNumber += 1;
       this.gameState.currentPromptIndex = 0;
-    }
+    },
   
     /**
      * Ends the voting phase.
@@ -331,7 +318,7 @@ class GameLogic {
       // Voting completed
       this.gameState.phase = 'results';
       this.gameState.stateNumber += 1;
-    }
+    },
   
     /**
      * Starts the results phase.
@@ -340,7 +327,7 @@ class GameLogic {
       this.gameState.phase = 'results';
       this.gameState.stateNumber += 1;
       this.calculateRoundScores();
-    }
+    },
   
     /**
      * Ends the results phase.
@@ -349,7 +336,7 @@ class GameLogic {
       // Round results have been processed
       this.gameState.phase = 'scores';
       this.gameState.stateNumber += 1;
-    }
+    },
   
     /**
      * Starts the scores phase.
@@ -358,7 +345,7 @@ class GameLogic {
       this.gameState.phase = 'scores';
       this.gameState.stateNumber += 1;
       this.updateTotalScores();
-    }
+    },
   
     /**
      * Ends the scores phase.
@@ -366,7 +353,7 @@ class GameLogic {
     endScores() {
       // Scores have been updated
       this.gameState.stateNumber += 1;
-    }
+    },
   
     /**
      * Ends the game.
@@ -374,7 +361,29 @@ class GameLogic {
     async endGame() {
       this.gameState.phase = 'gameOver';
       this.gameState.stateNumber += 1;
-    }
+    },
+  
+    /**
+     * Resets the game state to initial values.
+     */
+    resetGameState() {
+      this.gameState = {
+        phase: 'joining',
+        stateNumber: 0,
+        players: {},
+        audience: {},
+        submittedPrompts: [],
+        activePrompts: [],
+        currentPromptIndex: 0,
+        answers: {},
+        votes: {},
+        roundScores: {},
+        totalScores: {},
+        roundNumber: 1,
+        totalRounds: 3,
+        isPaused: false,
+      };
+    },
   
     /**
      * Assigns prompts to players based on number of players and prompts.
@@ -410,10 +419,6 @@ class GameLogic {
           assignedPlayers = [player1, player2];
         } else {
           // For odd number of players, assign prompts in a way that players get 2 prompts
-          // Example for 3 players:
-          // Prompt1: Player1, Player2
-          // Prompt2: Player1, Player3
-          // Prompt3: Player2, Player3
           const player1 = players[index % numPlayers];
           const player2 = players[(index + index + 1) % numPlayers];
           assignedPlayers = [player1, player2];
@@ -435,7 +440,7 @@ class GameLogic {
           player.assignedPrompts.push(prompt);
         });
       });
-    }
+    },
   
     /**
      * Shuffles an array using the Fisher-Yates algorithm.
@@ -449,7 +454,7 @@ class GameLogic {
         [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
       }
       return newArray;
-    }
+    },
   
     /**
      * Calculates round scores based on votes.
@@ -473,7 +478,7 @@ class GameLogic {
           this.gameState.players[answer.username].roundScore += points;
         });
       });
-    }
+    },
   
     /**
      * Updates total scores by adding round scores.
@@ -485,7 +490,7 @@ class GameLogic {
         player.roundScore = 0; // Reset round score
         this.gameState.totalScores[username] = player.score;
       });
-    }
+    },
   
     /**
      * Placeholder for fetching prompts from an external API.
@@ -502,18 +507,7 @@ class GameLogic {
         { promptText: 'What is your biggest fear and why?' },
         { promptText: 'Share a unique talent you possess.' },
       ];
-    }
-  
-    /**
-     * Placeholder for saving a prompt via an external API.
-     * @param {String} username - The user's username.
-     * @param {String} promptText - The prompt text.
-     */
-    async savePrompt(username, promptText) {
-      // Implement your logic to save the prompt to a database or external service
-      // For demonstration, simply returning a resolved promise
-      return Promise.resolve();
-    }
+    },
   
     /**
      * Retrieves the current game state.
@@ -522,7 +516,7 @@ class GameLogic {
     getGameState() {
       // Return a copy to prevent external mutations
       return JSON.parse(JSON.stringify(this.gameState));
-    }
+    },
   
     /**
      * Retrieves a player's specific state.
@@ -552,7 +546,7 @@ class GameLogic {
         };
       }
       return null;
-    }
+    },
   
     /**
      * Gets the total number of players.
@@ -560,11 +554,8 @@ class GameLogic {
      */
     getTotalPlayers() {
       return Object.keys(this.gameState.players).length;
-    }
-  }
+    },
+  };
   
-  // Export the singleton instance
-  const instance = new GameLogic();
-  Object.freeze(instance); // Prevent modifications to the instance
+  module.exports = gameLogic;
   
-  module.exports = instance;  

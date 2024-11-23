@@ -1,6 +1,12 @@
+<!-- views/chat.ejs -->
 <div>
-    <input type="text" @keyup.enter="chat()" v-model="chatmessage" class="form-control" placeholder="Chat">
-    <ul id="chat">
-        <li v-for="message in messages">{{message}}</li>
-    </ul>
-</div>
+    <h3>Chat</h3>
+    <div class="chat-box">
+      <div v-for="(chat, index) in chatMessages" :key="index">
+        <strong>{{ chat.username }}:</strong> {{ chat.message }}
+      </div>
+    </div>
+    <input type="text" v-model="newChatMessage" placeholder="Type a message...">
+    <button @click="sendChatMessage">Send</button>
+  </div>
+  
